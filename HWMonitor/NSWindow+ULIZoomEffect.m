@@ -163,44 +163,46 @@ typedef NSInteger	NSWindowAnimationBehavior;
 // Create a "screen shot" of the given window which we use for our fake window
 //	that we can animate.
 
--(NSImage*)	uli_imageWithSnapshotForceActive: (BOOL)doForceActive
+-(NSImage*)     uli_imageWithSnapshotForceActive: (BOOL)doForceActive
 {
-	NSDisableScreenUpdates();
-	BOOL	wasVisible = [self isVisible];
-	
-	if( doForceActive )
-		[self makeKeyAndOrderFront: nil];
-	else
-		[self orderFront: nil];
-	
-    // snag the image
-	CGImageRef windowImage = CGWindowListCreateImage(CGRectNull, kCGWindowListOptionIncludingWindow, (CGWindowID)[self windowNumber], kCGWindowImageBoundsIgnoreFraming);
-    
-	if( !wasVisible )
-		[self orderOut: nil];
-	NSEnableScreenUpdates();
-	
-    // little bit of error checking
-    if(CGImageGetWidth(windowImage) <= 1)
-	{
-        CGImageRelease(windowImage);
-        return nil;
-    }
-    
-	CGFloat		backingScaleFactor = 1.0;
-	if( [self respondsToSelector: @selector(backingScaleFactor)] )
-		backingScaleFactor = self.backingScaleFactor;
-	
-    // Create a bitmap rep from the window and convert to NSImage...
-    NSBitmapImageRep *bitmapRep = [[NSBitmapImageRep alloc] initWithCGImage: windowImage];
-    NSImage *image = [[NSImage alloc] initWithSize: NSMakeSize(CGImageGetWidth(windowImage) / backingScaleFactor, CGImageGetHeight(windowImage) / backingScaleFactor)];
-    [image addRepresentation: bitmapRep];
-    [bitmapRep release];
-    CGImageRelease(windowImage);
-    
-    return [image autorelease];
-}
+        NSDisableScreenUpdates();
 
+        BOOL wasVisible = [self isVisible];
+
+        if( doForceActive )
+                [self makeKeyAndOrderFront: nil];
+        else
+                [self orderFront: nil];
+
+        // Capture the window's content using AppKit instead of
+        // CGWindowListCreateImage (unavailable in macOS 15).
+        NSView *contentView = [self contentView];
+        NSRect contentBounds = [contentView bounds];
+
+        [contentView displayIfNeeded];
+
+        NSBitmapImageRep *bitmapRep =
+                [contentView bitmapImageRepForCachingDisplayInRect: contentBounds];
+
+        if( bitmapRep )
+                [contentView cacheDisplayInRect: contentBounds
+                               toBitmapImageRep: bitmapRep];
+
+        if( !wasVisible )
+                [self orderOut: nil];
+
+        NSEnableScreenUpdates();
+
+        // Check whether the snapshot was successfully generated.
+        if( !bitmapRep || bitmapRep.pixelsWide <= 1 || bitmapRep.pixelsHigh <= 1 )
+                return nil;
+
+        // Create an NSImage from the bitmap representation.
+        NSImage *image = [[NSImage alloc] initWithSize: contentBounds.size];
+        [image addRepresentation: bitmapRep];
+
+        return [image autorelease];
+}
 
 // Create a borderless window that shows and contains the given image:
 
@@ -243,6 +245,14 @@ typedef NSInteger	NSWindowAnimationBehavior;
 		[self setAnimationBehavior: NSWindowAnimationBehaviorNone];	// Prevent system animations from interfering.
 	
 	NSImage		*	snapshotImage = [self uli_imageWithSnapshotForceActive: YES];
+	if( !snapshotImage )
+	{
+        	[self makeKeyAndOrderFront: nil];
+        	if( haveAnimBehaviour )
+                	[self setAnimationBehavior: oldAnimationBehaviour];
+        	return;
+	}
+
 	NSRect			myFrame = [self frame];
 	NSRect			poppedFrame = NSInsetRect(myFrame, -20, -20);
 	myFrame.size = snapshotImage.size;
@@ -278,6 +288,13 @@ typedef NSInteger	NSWindowAnimationBehavior;
 		[self setAnimationBehavior: NSWindowAnimationBehaviorNone];	// Prevent system animations from interfering.
 	
 	NSImage		*	snapshotImage = [self uli_imageWithSnapshotForceActive: YES];
+        if( !snapshotImage )
+        {
+                [self makeKeyAndOrderFront: nil];
+                if( haveAnimBehaviour )
+                        [self setAnimationBehavior: oldAnimationBehaviour];
+                return;
+        }
 	NSRect			myFrame = [self frame];
 	myFrame.size = snapshotImage.size;
 	ULIQuicklyAnimatingWindow	*	animationWindow = [self uli_animationWindowForZoomEffectWithImage: snapshotImage];
@@ -308,7 +325,14 @@ typedef NSInteger	NSWindowAnimationBehavior;
 	if( haveAnimBehaviour )
 		[self setAnimationBehavior: NSWindowAnimationBehaviorNone];	// Prevent system animations from interfering.
 	
-    NSImage		*	snapshotImage = [self uli_imageWithSnapshotForceActive: NO];
+	NSImage		*	snapshotImage = [self uli_imageWithSnapshotForceActive: NO];
+	if( !snapshotImage )
+	{
+        	[self orderFront: nil];
+        	if( haveAnimBehaviour )
+                	[self setAnimationBehavior: oldAnimationBehaviour];
+        	return;
+	}
 	NSRect			myFrame = [self frame];
 	myFrame.size = snapshotImage.size;
 	ULIQuicklyAnimatingWindow	*	animationWindow = [self uli_animationWindowForZoomEffectWithImage: snapshotImage];
@@ -339,7 +363,14 @@ typedef NSInteger	NSWindowAnimationBehavior;
 	if( haveAnimBehaviour )
 		[self setAnimationBehavior: NSWindowAnimationBehaviorNone];	// Prevent system animations from interfering.
 	
-    NSImage		*	snapshotImage = [self uli_imageWithSnapshotForceActive: NO];
+	NSImage		*	snapshotImage = [self uli_imageWithSnapshotForceActive: NO];
+	if( !snapshotImage )
+	{
+		[self orderOut: nil];
+	        if( haveAnimBehaviour )
+			[self setAnimationBehavior: oldAnimationBehaviour];
+        	return;
+	}
 	NSRect			myFrame = [self frame];
 	myFrame.size = snapshotImage.size;
 	ULIQuicklyAnimatingWindow	*	animationWindow = [self uli_animationWindowForZoomEffectWithImage: snapshotImage];

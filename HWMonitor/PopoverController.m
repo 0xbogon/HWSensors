@@ -312,7 +312,11 @@
 #if __MAC_OS_X_VERSION_MIN_ALLOWED >= MAC_OS_X_VERSION_10_10
     [self.popover.contentViewController.view.window setAppearance:[NSAppearance appearanceNamed:self.monitorEngine.configuration.colorTheme.useBrightIcons.boolValue ? NSAppearanceNameVibrantDark : NSAppearanceNameVibrantLight]];
 #else
-    [self.popover setAppearance:self.monitorEngine.configuration.colorTheme.useBrightIcons.boolValue ? NSPopoverAppearanceHUD : NSPopoverAppearanceMinimal];
+    [self.popover setAppearance:
+        [NSAppearance appearanceNamed:
+            self.monitorEngine.configuration.colorTheme.useBrightIcons.boolValue
+                ? NSAppearanceNameVibrantDark
+                : NSAppearanceNameVibrantLight]];
 #endif
 }
 

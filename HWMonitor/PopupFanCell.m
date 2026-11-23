@@ -120,7 +120,10 @@
 #if __MAC_OS_X_VERSION_MIN_ALLOWED >= MAC_OS_X_VERSION_10_10
         _popover.appearance = [NSAppearance appearanceNamed:fan.engine.configuration.colorTheme.useBrightIcons.boolValue ?  NSAppearanceNameVibrantDark : NSAppearanceNameVibrantLight];
 #else
-        _popover.appearance = fan.engine.configuration.colorTheme.useBrightIcons.boolValue ?  NSPopoverAppearanceHUD : NSPopoverAppearanceMinimal;
+        _popover.appearance = [NSAppearance appearanceNamed:
+            fan.engine.configuration.colorTheme.useBrightIcons.boolValue
+            ? NSAppearanceNameVibrantDark
+            : NSAppearanceNameVibrantLight];
 #endif
 
         [_popover showRelativeToRect:self.frame ofView:self preferredEdge:NSMinXEdge];

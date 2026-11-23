@@ -9,6 +9,8 @@ Binaries/*
 Sparkle/Binaries/*
 Package/Distribution.xml
 Package/*.pkg
+build/*
+build.log
 
 
 *.xccheckout
